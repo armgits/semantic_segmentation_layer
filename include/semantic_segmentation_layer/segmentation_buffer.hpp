@@ -59,15 +59,7 @@
 #include "vision_msgs/msg/label_info.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
-/**
- * @brief Represents the parameters associated with the cost calculation for a given class
- */
-struct CostHeuristicParams
-{
-    uint8_t base_cost, max_cost, mark_confidence;
-    int samples_to_max_cost;
-    bool dominant_priority;
-};
+#include "semantic_segmentation_layer/segmentation_cost_multimap.hpp"
 
 /**
  * @brief Represents a 2D grid index with equality comparison. Supports negative indexes
@@ -305,25 +297,25 @@ class TemporalObservationQueue
     void push(TileObservation tile_obs, bool dominant_priority = false)
     {
         uint8_t class_id = tile_obs.class_id;
-        
+
         // Add observation to the appropriate class queue
         auto& queue = class_queues_[class_id];
         queue.push_back(tile_obs);
-        
+
         // Update confidence sum for this class
         class_confidence_sums_[class_id] += tile_obs.confidence;
-        
+
         // Check if this class should become dominant
         size_t current_class_size = queue.size();
         bool should_become_dominant = false;
-        
+
         if (dominant_priority) {
             should_become_dominant = true;
         } else {
             //logic for non-dominant_priority classes: only compete by size
             should_become_dominant = (current_class_size > dominant_class_size_);
         }
-        
+
         if (should_become_dominant)
         {
             // New dominant class - purge all other classes
@@ -331,7 +323,7 @@ class TemporalObservationQueue
             {
                 clearQueuesExcept(class_id);
             }
-            
+
             // Update dominance
             setDominant(class_id, current_class_size);
         }
@@ -359,8 +351,8 @@ class TemporalObservationQueue
      * @brief Gets the current sum of confidence values of the dominant class.
      * @return The sum of confidences for the dominant class.
      */
-    float getConfidenceSum() const 
-    { 
+    float getConfidenceSum() const
+    {
         if (dominant_class_id_ != -1)
         {
             auto it = class_confidence_sums_.find(dominant_class_id_);
@@ -381,8 +373,8 @@ class TemporalObservationQueue
      * the object in the class is not made editable by others
      * @return The dominant class queue, or empty deque if no dominant class.
      */
-    std::deque<TileObservation> getQueue() 
-    { 
+    std::deque<TileObservation> getQueue()
+    {
         if (dominant_class_id_ != -1)
         {
             auto it = class_queues_.find(dominant_class_id_);
@@ -407,7 +399,7 @@ class TemporalObservationQueue
         {
             auto& queue = it->second;
             const uint8_t class_id = it->first;
-        
+
             // Pop observations older than decay_time_ from the front (oldest first),
             // updating the confidence sum accordingly.
             while (!queue.empty())
@@ -423,7 +415,7 @@ class TemporalObservationQueue
                     break;
                 }
             }
-        
+
             // If the queue ended up empty, erase the class entry entirely to avoid
             // keeping "zombie" keys and to keep class_queues_ and class_confidence_sums_
             // in sync. Track if the dominant class was removed to recompute dominance later.
@@ -438,7 +430,7 @@ class TemporalObservationQueue
                 ++it;
             }
         }
-        
+
         // Update dominant class bookkeeping:
         // - If the dominant class was removed, scan to find the new dominant.
         // - Otherwise, just refresh the dominant_class_size_ if it still exists;
@@ -643,7 +635,7 @@ struct PointData {
 };
 
 /**
- * @brief Creates a PointCloud2 message that contains a visual representation of 
+ * @brief Creates a PointCloud2 message that contains a visual representation of
  * a temporal tile map. There's a "column" of points on each tile, each point represents
  * a segmentation observation over that tile and they are all stacked together. Each observation
  * Has a channel for the class, for the confidence, and the confidence sum of the observations
@@ -706,110 +698,6 @@ inline sensor_msgs::msg::PointCloud2 visualizeTemporalTileMap(SegmentationTileMa
 
     return cloud;
 }
-
-/**
- * Manages segmentation class information, including mapping between class names and IDs,
- * as well as managing the cost heuristic parameters associated with each class.
- */
-class SegmentationCostMultimap {
-public:
-    using SharedPtr = std::shared_ptr<SegmentationCostMultimap>;
-    SegmentationCostMultimap(){}
-    /**
-     * Constructs the SegmentationCostMultimap.
-     * 
-     * @param nameToIdMap A map from class names to class IDs.
-     * @param nameToCostMap A map from class names to CostHeuristicParams.
-     */
-    SegmentationCostMultimap(const std::unordered_map<std::string, uint8_t>& nameToIdMap,
-                             const std::unordered_map<std::string, CostHeuristicParams>& nameToCostMap) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        name_to_id_ = nameToIdMap;
-        for (const auto& pair : nameToIdMap) {
-            const auto& name = pair.first;
-            uint8_t id = pair.second;
-            auto cost_it = nameToCostMap.find(name);
-            if (cost_it == nameToCostMap.end()) {
-                // This shouldn't happen because we already checked in createSegmentationCostMultimap
-                // but let's be extra safe
-                id_to_cost_[id] = CostHeuristicParams{0, 0, 0, 0, false};
-                continue;
-            }
-            id_to_cost_[id] = cost_it->second;
-        }
-    }
-
-    /**
-     * Updates the cost heuristic parameters associated with a class ID.
-     * 
-     * @param id The class ID.
-     * @param cost The new CostHeuristicParams to associate with the class.
-     */
-    void updateCostById(uint8_t id, const CostHeuristicParams& cost) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        id_to_cost_[id] = cost;
-    }
-
-    /**
-     * Retrieves the cost heuristic parameters associated with a class ID.
-     * 
-     * @param id The class ID.
-     * @return The CostHeuristicParams associated with the class.
-     */
-    CostHeuristicParams getCostById(uint8_t id) const {
-        std::lock_guard<std::mutex> lock(mutex_);
-        auto it = id_to_cost_.find(id);
-        if (it == id_to_cost_.end()) {
-            return CostHeuristicParams{0, 0, 0, 0, false};
-        }
-        return it->second;
-    }
-
-    /**
-     * Checks if a class ID exists in the cost mapping.
-     * 
-     * @param id The class ID to check.
-     * @return true if the class ID exists, false otherwise.
-     */
-    bool hasClassId(uint8_t id) const {
-        // No lock needed - only reading, no concurrent modifications
-        return id_to_cost_.find(id) != id_to_cost_.end();
-    }
-
-    /**
-     * Updates the cost heuristic parameters associated with a class name.
-     * 
-     * @param name The class name.
-     * @param cost The new CostHeuristicParams to associate with the class.
-     */
-    void updateCostByName(const std::string& name, const CostHeuristicParams& cost) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        uint8_t id = name_to_id_.at(name);
-        id_to_cost_[id] = cost;
-    }
-
-    /**
-     * Retrieves the cost heuristic parameters associated with a class name.
-     * 
-     * @param name The class name.
-     * @return The CostHeuristicParams associated with the class.
-     */
-    CostHeuristicParams getCostByName(const std::string& name) const {
-        std::lock_guard<std::mutex> lock(mutex_);
-        uint8_t id = name_to_id_.at(name);
-        return id_to_cost_.at(id);
-    }
-
-    bool empty() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return name_to_id_.empty() || id_to_cost_.empty();
-    }
-
-private:
-    mutable std::mutex mutex_;  // mutable allows locking in const methods
-    std::unordered_map<std::string, uint8_t> name_to_id_;
-    std::unordered_map<uint8_t, CostHeuristicParams> id_to_cost_;
-};
 
 namespace semantic_segmentation_layer {
 /**
@@ -913,7 +801,7 @@ class SegmentationBuffer
      */
     std::string getBufferSource() { return buffer_source_; }
     std::vector<std::string> getClassTypes() { return class_types_; }
-    
+
     /**
      * @brief Get class names for a specific class type
      * @param class_type The class type to get names for
@@ -964,7 +852,7 @@ class SegmentationBuffer
     double sq_max_lookahead_distance_;
     double sq_min_lookahead_distance_;
     tf2::Duration tf_tolerance_;
-    
+
     SegmentationCostMultimap::SharedPtr segmentation_cost_multimap_;
 
     SegmentationTileMap::SharedPtr temporal_tile_map_;
