@@ -59,6 +59,8 @@
 #include "vision_msgs/msg/label_info.hpp"
 #include "visualization_msgs/msg/marker.hpp"
 
+#include "semantic_segmentation_layer/temporal_observation_queue.hpp"
+
 /**
  * @brief Represents the parameters associated with the cost calculation for a given class
  */
@@ -270,244 +272,6 @@ private:
 };
 
 /**
- * @brief Encapsulates the observation data for a tile, including class ID, cost, confidence, and timestamp.
- */
-struct TileObservation {
-    using UniquePtr = std::unique_ptr<TileObservation>;
-
-    uint8_t class_id;
-    float confidence;
-    double timestamp;
-};
-
-/**
- * @brief Manages temporal observations with a decay mechanism, maintaining a sum of confidences.
- * Wraps multiple std::deque objects to store observations per class ID, allowing for efficient insertion and removal.
- * Uses class ID -1 as a sentinel value to indicate no dominant class exists.
- */
-class TemporalObservationQueue
-{
-   private:
-    std::unordered_map<uint8_t, std::deque<TileObservation>> class_queues_;
-    std::unordered_map<uint8_t, float> class_confidence_sums_;
-    int dominant_class_id_ = -1;
-    size_t dominant_class_size_ = 0;
-    double decay_time_;
-
-   public:
-    TemporalObservationQueue() {}
-
-    /**
-     * @brief Adds an observation to the appropriate class queue, manages dominant class tracking.
-     * @param tile_obs The observation to add.
-     * @param dominant_priority Whether this class should take immediate dominance when observed.
-     */
-    void push(TileObservation tile_obs, bool dominant_priority = false)
-    {
-        uint8_t class_id = tile_obs.class_id;
-        
-        // Add observation to the appropriate class queue
-        auto& queue = class_queues_[class_id];
-        queue.push_back(tile_obs);
-        
-        // Update confidence sum for this class
-        class_confidence_sums_[class_id] += tile_obs.confidence;
-        
-        // Check if this class should become dominant
-        size_t current_class_size = queue.size();
-        bool should_become_dominant = false;
-        
-        if (dominant_priority) {
-            should_become_dominant = true;
-        } else {
-            //logic for non-dominant_priority classes: only compete by size
-            should_become_dominant = (current_class_size > dominant_class_size_);
-        }
-        
-        if (should_become_dominant)
-        {
-            // New dominant class - purge all other classes
-            if (dominant_class_id_ != -1 && dominant_class_id_ != class_id)
-            {
-                clearQueuesExcept(class_id);
-            }
-            
-            // Update dominance
-            setDominant(class_id, current_class_size);
-        }
-    }
-
-    /**
-     * @brief Checks if the dominant class queue is empty.
-     * @return True if empty, false otherwise.
-     */
-    bool empty() const { return dominant_class_id_ == -1; }
-
-    /**
-     * @brief Gets the size of the dominant class queue.
-     * @return The number of observations in the dominant class queue.
-     */
-    size_t size() const { return dominant_class_size_; }
-
-    /**
-     * @brief Sets the decay time for observations.
-     * @param decay_time The decay time in seconds.
-     */
-    void setDecayTime(float decay_time) { decay_time_ = decay_time; }
-
-    /**
-     * @brief Gets the current sum of confidence values of the dominant class.
-     * @return The sum of confidences for the dominant class.
-     */
-    float getConfidenceSum() const 
-    { 
-        if (dominant_class_id_ != -1)
-        {
-            auto it = class_confidence_sums_.find(dominant_class_id_);
-            return (it != class_confidence_sums_.end()) ? it->second : 0.0f;
-        }
-        return 0.0f;
-    }
-
-    /**
-     * @brief Gets the class ID of the dominant class (most samples).
-     * @return The class ID, or -1 if no observations exist (-1 is used as sentinel value).
-     */
-    int getClassId() const { return dominant_class_id_; }
-
-    /**
-     * @brief Returns a copy of the dominant class queue. Will have overhead
-     * due to the copy operation but avoids race conditions since
-     * the object in the class is not made editable by others
-     * @return The dominant class queue, or empty deque if no dominant class.
-     */
-    std::deque<TileObservation> getQueue() 
-    { 
-        if (dominant_class_id_ != -1)
-        {
-            auto it = class_queues_.find(dominant_class_id_);
-            return (it != class_queues_.end()) ? it->second : std::deque<TileObservation>();
-        }
-        return std::deque<TileObservation>();
-    }
-
-    /**
-     * @brief Removes observations older than the decay time from all class queues.
-     * @param current_time The current time for comparison.
-     */
-    void purgeOld(double current_time)
-    {
-        // Iterate through all class queues and remove time-expired observations.
-        // While doing so, maintain the running confidence sums and remove classes
-        // whose queues become empty to preserve the invariant: if a class exists
-        // in class_queues_, its queue size is >= 1.
-        bool dominant_removed = false;
-
-        for (auto it = class_queues_.begin(); it != class_queues_.end(); )
-        {
-            auto& queue = it->second;
-            const uint8_t class_id = it->first;
-        
-            // Pop observations older than decay_time_ from the front (oldest first),
-            // updating the confidence sum accordingly.
-            while (!queue.empty())
-            {
-                double age = current_time - queue.front().timestamp;
-                if (age > decay_time_)
-                {
-                    class_confidence_sums_[class_id] -= queue.front().confidence;
-                    queue.pop_front();
-                }
-                else
-                {
-                    break;
-                }
-            }
-        
-            // If the queue ended up empty, erase the class entry entirely to avoid
-            // keeping "zombie" keys and to keep class_queues_ and class_confidence_sums_
-            // in sync. Track if the dominant class was removed to recompute dominance later.
-            if (queue.empty())
-            {
-                if (class_id == dominant_class_id_) dominant_removed = true;
-                class_confidence_sums_.erase(class_id);
-                it = class_queues_.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
-        
-        // Update dominant class bookkeeping:
-        // - If the dominant class was removed, scan to find the new dominant.
-        // - Otherwise, just refresh the dominant_class_size_ if it still exists;
-        //   if not found (edge case), reset dominance.
-        if (dominant_removed) {
-            recomputeDominant();
-        } else if (dominant_class_id_ != -1) {
-            auto it = class_queues_.find(dominant_class_id_);
-            if (it != class_queues_.end()) setDominant(dominant_class_id_, it->second.size());
-            else resetDominant();
-        }
-    }
-
-private:
-    /**
-     * @brief Removes all class queues and confidence sums except the specified class.
-     * @param keep_class_id The class ID to preserve.
-     */
-    void clearQueuesExcept(uint8_t keep_class_id)
-    {
-        for (auto it = class_queues_.begin(); it != class_queues_.end();)
-        {
-            if (it->first != keep_class_id)
-            {
-                class_confidence_sums_.erase(it->first);
-                it = class_queues_.erase(it);
-            }
-            else
-            {
-                ++it;
-            }
-        }
-    }
-
-    /**
-     * @brief Recomputes dominant_class_id_ and dominant_class_size_ by scanning class_queues_.
-     */
-    void recomputeDominant()
-    {
-        resetDominant();
-        for (const auto& pair : class_queues_)
-        {
-            if (pair.second.size() > dominant_class_size_)
-            {
-                setDominant(pair.first, pair.second.size());
-            }
-        }
-    }
-
-    /**
-     * @brief Resets the dominant class state to none.
-     */
-    void resetDominant()
-    {
-        dominant_class_id_ = -1;
-        dominant_class_size_ = 0;
-    }
-
-    /**
-     * @brief Sets the dominant class and its current size.
-     */
-    void setDominant(uint8_t class_id, size_t size)
-    {
-        dominant_class_id_ = class_id;
-        dominant_class_size_ = size;
-    }
-};
-
-/**
  * @brief Manages a map of tile observations, allowing for spatial and temporal querying.
  * Utilizes an unordered_map to efficiently index observations by tile and supports locking for thread safety.
  */
@@ -643,7 +407,7 @@ struct PointData {
 };
 
 /**
- * @brief Creates a PointCloud2 message that contains a visual representation of 
+ * @brief Creates a PointCloud2 message that contains a visual representation of
  * a temporal tile map. There's a "column" of points on each tile, each point represents
  * a segmentation observation over that tile and they are all stacked together. Each observation
  * Has a channel for the class, for the confidence, and the confidence sum of the observations
@@ -717,7 +481,7 @@ public:
     SegmentationCostMultimap(){}
     /**
      * Constructs the SegmentationCostMultimap.
-     * 
+     *
      * @param nameToIdMap A map from class names to class IDs.
      * @param nameToCostMap A map from class names to CostHeuristicParams.
      */
@@ -741,7 +505,7 @@ public:
 
     /**
      * Updates the cost heuristic parameters associated with a class ID.
-     * 
+     *
      * @param id The class ID.
      * @param cost The new CostHeuristicParams to associate with the class.
      */
@@ -752,7 +516,7 @@ public:
 
     /**
      * Retrieves the cost heuristic parameters associated with a class ID.
-     * 
+     *
      * @param id The class ID.
      * @return The CostHeuristicParams associated with the class.
      */
@@ -767,7 +531,7 @@ public:
 
     /**
      * Checks if a class ID exists in the cost mapping.
-     * 
+     *
      * @param id The class ID to check.
      * @return true if the class ID exists, false otherwise.
      */
@@ -778,7 +542,7 @@ public:
 
     /**
      * Updates the cost heuristic parameters associated with a class name.
-     * 
+     *
      * @param name The class name.
      * @param cost The new CostHeuristicParams to associate with the class.
      */
@@ -790,7 +554,7 @@ public:
 
     /**
      * Retrieves the cost heuristic parameters associated with a class name.
-     * 
+     *
      * @param name The class name.
      * @return The CostHeuristicParams associated with the class.
      */
@@ -913,7 +677,7 @@ class SegmentationBuffer
      */
     std::string getBufferSource() { return buffer_source_; }
     std::vector<std::string> getClassTypes() { return class_types_; }
-    
+
     /**
      * @brief Get class names for a specific class type
      * @param class_type The class type to get names for
@@ -964,7 +728,7 @@ class SegmentationBuffer
     double sq_max_lookahead_distance_;
     double sq_min_lookahead_distance_;
     tf2::Duration tf_tolerance_;
-    
+
     SegmentationCostMultimap::SharedPtr segmentation_cost_multimap_;
 
     SegmentationTileMap::SharedPtr temporal_tile_map_;
