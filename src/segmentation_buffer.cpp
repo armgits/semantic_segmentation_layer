@@ -36,6 +36,7 @@
  *          Johan Solarte (jsolarte@robot.com)
  *********************************************************************/
 #include "semantic_segmentation_layer/segmentation_buffer.hpp"
+#include "semantic_segmentation_layer/utils.hpp"
 
 #include <algorithm>
 #include <chrono>
