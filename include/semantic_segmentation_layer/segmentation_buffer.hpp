@@ -632,17 +632,6 @@ class SegmentationTileMap {
 };
 
 /**
- * @brief Struct for holding the relevant data of any observation. Includes
- * its position, its confidence, the confidence sum of the tile and the
- * class to which it belongs
- */
-struct PointData {
-    float x, y, z;
-    float confidence, confidence_sum;
-    uint8_t class_id;
-};
-
-/**
  * Manages segmentation class information, including mapping between class names and IDs,
  * as well as managing the cost heuristic parameters associated with each class.
  */

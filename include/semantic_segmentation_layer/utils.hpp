@@ -46,6 +46,18 @@
 #include "segmentation_tile_map.hpp"
 
 /**
+* @brief Struct for holding the relevant data of any observation. Includes
+* its position, its confidence, the confidence sum of the tile and the
+* class to which it belongs
+*/
+struct PointData
+{
+  float x, y, z;
+  float confidence, confidence_avg;
+  uint8_t class_id;
+};
+
+/**
  * @brief Creates a PointCloud2 message that contains a visual representation of 
  * a temporal tile map. There's a "column" of points on each tile, each point represents
  * a segmentation observation over that tile and they are all stacked together. Each observation
