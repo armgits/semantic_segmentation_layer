@@ -58,80 +58,69 @@ struct PointData
 };
 
 /**
- * @brief Creates a PointCloud2 message that contains a visual representation of 
+ * @brief Creates a PointCloud2 message that contains a visual representation of
  * a temporal tile map. There's a "column" of points on each tile, each point represents
  * a segmentation observation over that tile and they are all stacked together. Each observation
  * Has a channel for the class, for the confidence, and the confidence sum of the observations
  * over that tile
  * @param tileMap The segmentation tile map
  */
-inline sensor_msgs::msg::PointCloud2 visualizeTemporalTileMap(SegmentationTileMap& tileMap, const std::string& frame_id,
-                                                              const rclcpp::Time& stamp)
+inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
+  SegmentationTileMap & tileMap, const std::string & frame_id,
+  const rclcpp::Time & stamp)
 {
-    /**
-    * @brief Struct for holding the relevant data of any observation. Includes
-    * its position, its confidence, the confidence sum of the tile and the
-    * class to which it belongs
-    */
-    struct PointData 
-    {
-        float x, y, z;
-        float confidence, confidence_sum;
-        uint8_t class_id;
-    };
-
-    sensor_msgs::msg::PointCloud2 cloud;
-    cloud.header.frame_id = frame_id;
-    cloud.header.stamp = stamp;
+  auto cloud = std::make_unique<sensor_msgs::msg::PointCloud2>();
+  cloud->header.frame_id = frame_id;
+  cloud->header.stamp = stamp;
 
     // Define fields for PointCloud2
-    sensor_msgs::PointCloud2Modifier modifier(cloud);
-    modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+  sensor_msgs::PointCloud2Modifier modifier(*cloud);
+  modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "y", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "z", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "confidence", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "confidence_sum", 1, sensor_msgs::msg::PointField::FLOAT32,
+                                     "confidence_avg", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "class", 1, sensor_msgs::msg::PointField::UINT8);
 
     // Reserve space for points
-    std::vector<PointData> points;
-    for (auto& tile : tileMap) {
-        TileIndex idx = tile.first;
-        TileWorldXY worldXY = tileMap.indexToWorld(idx.x, idx.y);
-        double z = 0.0;
-        for (auto& obs : tile.second.getQueue()) {
-            PointData point;
-            point.x = worldXY.x;
-            point.y = worldXY.y;
-            point.z = z;
-            point.confidence = obs.confidence;
-            point.confidence_sum = tile.second.getConfidenceSum() / tile.second.size();
-            point.class_id = static_cast<uint8_t>(obs.class_id);
-            points.push_back(point);
-            z += 0.02;  // Increment Z by 0.02m for each observation
-        }
+  std::vector<PointData> points;
+  for (auto & tile : tileMap) {
+    TileIndex idx = tile.first;
+    TileWorldXY worldXY = tileMap.indexToWorld(idx.x, idx.y);
+    double z = 0.0;
+    for (auto & obs : tile.second.getQueue()) {
+      PointData point;
+      point.x = worldXY.x;
+      point.y = worldXY.y;
+      point.z = z;
+      point.confidence = obs.confidence;
+      point.confidence_avg = tile.second.getConfidenceSum() / tile.second.size();
+      point.class_id = static_cast<uint8_t>(obs.class_id);
+      points.push_back(point);
+      z += 0.02;        // Increment Z by 0.02m for each observation
     }
+  }
 
     // Set data in PointCloud2
-    modifier.resize(points.size());  // Number of points
-    sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
-    sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
-    sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
-    sensor_msgs::PointCloud2Iterator<float> iter_confidence(cloud, "confidence");
-    sensor_msgs::PointCloud2Iterator<float> iter_confidence_sum(cloud, "confidence_sum");
-    sensor_msgs::PointCloud2Iterator<uint8_t> iter_class(cloud, "class");
+  modifier.resize(points.size());    // Number of points
+  sensor_msgs::PointCloud2Iterator<float> iter_x(*cloud, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud, "z");
+  sensor_msgs::PointCloud2Iterator<float> iter_confidence(*cloud, "confidence");
+  sensor_msgs::PointCloud2Iterator<float> iter_confidence_avg(*cloud, "confidence_avg");
+  sensor_msgs::PointCloud2Iterator<uint8_t> iter_class(*cloud, "class");
 
-    for (const auto& point : points) {
-        *iter_x = point.x;
-        *iter_y = point.y;
-        *iter_z = point.z;
-        *iter_confidence = point.confidence;
-        *iter_confidence_sum = point.confidence_sum;
-        *iter_class = point.class_id;
-        ++iter_x; ++iter_y; ++iter_z; ++iter_confidence;++iter_confidence_sum; ++iter_class;
-    }
+  for (const auto & point : points) {
+    *iter_x = point.x;
+    *iter_y = point.y;
+    *iter_z = point.z;
+    *iter_confidence = point.confidence;
+    *iter_confidence_avg = point.confidence_avg;
+    *iter_class = point.class_id;
+    ++iter_x; ++iter_y; ++iter_z; ++iter_confidence;++iter_confidence_avg; ++iter_class;
+  }
 
-    return cloud;
+  return cloud;
 }
 
 #endif  // SEMANTIC_SEGMENTATION_LAYER__UTILS_HPP_
