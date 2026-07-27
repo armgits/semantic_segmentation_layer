@@ -41,58 +41,55 @@
 SegmentationTileMap::SegmentationTileMap(float resolution, float decay_time)
 : resolution_(resolution), decay_time_(decay_time)
 {
-    tile_map_.reserve(1e4);
+  tile_map_.reserve(1e4);
 }
 
 TileIndex SegmentationTileMap::worldToIndex(double x, double y) const
 {
-    // Convert world coordinates to grid indices
-    int ix = static_cast<int>(std::floor(x / resolution_));
-    int iy = static_cast<int>(std::floor(y / resolution_));
-    
-    return TileIndex{ix, iy};
+  // Convert world coordinates to grid indices
+  int ix = static_cast<int>(std::floor(x / resolution_));
+  int iy = static_cast<int>(std::floor(y / resolution_));
+
+  return TileIndex{ix, iy};
 }
 
 TileWorldXY SegmentationTileMap::indexToWorld(int x, int y) const
 {
-    // Calculate the world coordinates of the center of the grid cell
-    double x_world = (static_cast<double>(x) + 0.5) * resolution_;
-    double y_world = (static_cast<double>(y) + 0.5) * resolution_;
-    
-    return TileWorldXY{x_world, y_world};
+  // Calculate the world coordinates of the center of the grid cell
+  double x_world = (static_cast<double>(x) + 0.5) * resolution_;
+  double y_world = (static_cast<double>(y) + 0.5) * resolution_;
+
+  return TileWorldXY{x_world, y_world};
 }
 
-void SegmentationTileMap::pushObservation(TileObservation& obs, TileIndex& idx, bool dominant_priority)
+void SegmentationTileMap::pushObservation(
+  TileObservation & obs, TileIndex & idx,
+  bool dominant_priority)
 {
-    auto it = tile_map_.find(idx);
-    if (it != tile_map_.end())
-    {
-        // TileIndex exists, push the observation with dominance flag
-        it->second.push(obs, dominant_priority);
-    }
-    else
-    {
-        // TileIndex does not exist, create a new TemporalObservationQueue with decay time
-        TemporalObservationQueue& queue = tile_map_[idx];
-        queue.setDecayTime(decay_time_);
-        queue.push(obs, dominant_priority);
-    }
+  auto it = tile_map_.find(idx);
+  if (it != tile_map_.end()) {
+    // TileIndex exists, push the observation with dominance flag
+    it->second.push(obs, dominant_priority);
+  } else {
+    // TileIndex does not exist, create a new TemporalObservationQueue with decay time
+    TemporalObservationQueue & queue = tile_map_[idx];
+    queue.setDecayTime(decay_time_);
+    queue.push(obs, dominant_priority);
+  }
 }
 
 void SegmentationTileMap::purgeOldObservations(double current_time)
 {
-    std::vector<TileIndex> tiles_to_remove;
-    for (auto& tile : tile_map_)
-    {
-        tile.second.purgeOld(current_time);
-        if(tile.second.empty())
-        {
-            tiles_to_remove.emplace_back(tile.first);
-        }
+  std::vector<TileIndex> tiles_to_remove;
+  for (auto & tile : tile_map_) {
+    tile.second.purgeOld(current_time);
+    if(tile.second.empty()) {
+      tiles_to_remove.emplace_back(tile.first);
     }
-    if(tile_map_.size() > 0)
-    for (auto& tile : tiles_to_remove)
-    {
-        tile_map_.erase(tile);
+  }
+  if(tile_map_.size() > 0) {
+    for (auto & tile : tiles_to_remove) {
+      tile_map_.erase(tile);
     }
+  }
 }
