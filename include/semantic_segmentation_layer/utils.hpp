@@ -73,7 +73,7 @@ inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
   cloud->header.frame_id = frame_id;
   cloud->header.stamp = stamp;
 
-    // Define fields for PointCloud2
+  // Define fields for PointCloud2
   sensor_msgs::PointCloud2Modifier modifier(*cloud);
   modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "y", 1, sensor_msgs::msg::PointField::FLOAT32,
@@ -82,7 +82,7 @@ inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
                                      "confidence_avg", 1, sensor_msgs::msg::PointField::FLOAT32,
                                      "class", 1, sensor_msgs::msg::PointField::UINT8);
 
-    // Reserve space for points
+  // Reserve space for points
   std::vector<PointData> points;
   for (auto & tile : tileMap) {
     TileIndex idx = tile.first;
@@ -97,12 +97,12 @@ inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
       point.confidence_avg = tile.second.getConfidenceSum() / tile.second.size();
       point.class_id = static_cast<uint8_t>(obs.class_id);
       points.push_back(point);
-      z += 0.02;        // Increment Z by 0.02m for each observation
+      z += 0.02;  // Increment Z by 0.02m for each observation
     }
   }
 
-    // Set data in PointCloud2
-  modifier.resize(points.size());    // Number of points
+  // Set data in PointCloud2
+  modifier.resize(points.size()); // Number of points
   sensor_msgs::PointCloud2Iterator<float> iter_x(*cloud, "x");
   sensor_msgs::PointCloud2Iterator<float> iter_y(*cloud, "y");
   sensor_msgs::PointCloud2Iterator<float> iter_z(*cloud, "z");
@@ -117,7 +117,8 @@ inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
     *iter_confidence = point.confidence;
     *iter_confidence_avg = point.confidence_avg;
     *iter_class = point.class_id;
-    ++iter_x; ++iter_y; ++iter_z; ++iter_confidence;++iter_confidence_avg; ++iter_class;
+    ++iter_x; ++iter_y; ++iter_z; ++iter_confidence;
+    ++iter_confidence_avg; ++iter_class;
   }
 
   return cloud;
