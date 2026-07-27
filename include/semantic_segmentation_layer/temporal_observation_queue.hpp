@@ -62,7 +62,8 @@ struct TileObservation
  */
 class TemporalObservationQueue
 {
-    friend class QueueTestWrapper;
+  friend class QueueTestWrapper;
+
 private:
   std::unordered_map<uint8_t, std::deque<TileObservation>> class_queues_;
   std::unordered_map<uint8_t, float> class_confidence_sums_;
