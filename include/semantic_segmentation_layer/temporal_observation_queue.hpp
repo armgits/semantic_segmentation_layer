@@ -74,71 +74,71 @@ public:
   TemporalObservationQueue() {}
 
   /**
-    * @brief Adds an observation to the appropriate class queue, manages dominant class tracking.
-    * @param tile_obs The observation to add.
-    * @param dominant_priority Whether this class should take immediate dominance when observed.
-    */
+   * @brief Adds an observation to the appropriate class queue, manages dominant class tracking.
+   * @param tile_obs The observation to add.
+   * @param dominant_priority Whether this class should take immediate dominance when observed.
+   */
   void push(TileObservation tile_obs, bool dominant_priority = false);
 
   /**
-    * @brief Checks if the dominant class queue is empty.
-    * @return True if empty, false otherwise.
-    */
+   * @brief Checks if the dominant class queue is empty.
+   * @return True if empty, false otherwise.
+   */
   bool empty() const {return dominant_class_id_ == -1;}
 
   /**
-    * @brief Gets the size of the dominant class queue.
-    * @return The number of observations in the dominant class queue.
-    */
+   * @brief Gets the size of the dominant class queue.
+   * @return The number of observations in the dominant class queue.
+   */
   size_t size() const {return dominant_class_size_;}
 
   /**
-    * @brief Sets the decay time for observations.
-    * @param decay_time The decay time in seconds.
-    */
+   * @brief Sets the decay time for observations.
+   * @param decay_time The decay time in seconds.
+   */
   void setDecayTime(float decay_time) {decay_time_ = decay_time;}
 
   /**
-    * @brief Gets the current sum of confidence values of the dominant class.
-    * @return The sum of confidences for the dominant class.
-    */
+   * @brief Gets the current sum of confidence values of the dominant class.
+   * @return The sum of confidences for the dominant class.
+   */
   float getConfidenceSum() const;
 
   /**
-    * @brief Gets the class ID of the dominant class (most samples).
-    * @return The class ID, or -1 if no observations exist (-1 is used as sentinel value).
-    */
+   * @brief Gets the class ID of the dominant class (most samples).
+   * @return The class ID, or -1 if no observations exist (-1 is used as sentinel value).
+   */
   int getClassId() const {return dominant_class_id_;}
 
   /**
-    * @brief Returns a copy of the dominant class queue. Will have overhead
-    * due to the copy operation but avoids race conditions since
-    * the object in the class is not made editable by others
-    * @return The dominant class queue, or empty deque if no dominant class.
-    */
+   * @brief Returns a copy of the dominant class queue. Will have overhead
+   * due to the copy operation but avoids race conditions since
+   * the object in the class is not made editable by others
+   * @return The dominant class queue, or empty deque if no dominant class.
+   */
   std::deque<TileObservation> getQueue();
 
   /**
-    * @brief Removes observations older than the decay time from all class queues.
-    * @param current_time The current time for comparison.
-    */
+   * @brief Removes observations older than the decay time from all class queues.
+   * @param current_time The current time for comparison.
+   */
   void purgeOld(double current_time);
 
 private:
   /**
-    * @brief Removes all class queues and confidence sums except the specified class.
-    * @param keep_class_id The class ID to preserve.
-    */
+   * @brief Removes all class queues and confidence sums except the specified class.
+   * @param keep_class_id The class ID to preserve.
+   */
   void clearQueuesExcept(uint8_t keep_class_id);
 
   /**
-    * @brief Recomputes dominant_class_id_ and dominant_class_size_ by scanning class_queues_.
-    */
+   * @brief Recomputes dominant_class_id_ and dominant_class_size_ by scanning class_queues_.
+   */
   void recomputeDominant();
 
   /**
-    * @brief Resets the dominant class state to none.
-    */
+   * @brief Resets the dominant class state to none.
+   */
   void resetDominant()
   {
     dominant_class_id_ = -1;
@@ -146,8 +146,8 @@ private:
   }
 
   /**
-    * @brief Sets the dominant class and its current size.
-    */
+   * @brief Sets the dominant class and its current size.
+   */
   void setDominant(uint8_t class_id, size_t size)
   {
     dominant_class_id_ = class_id;
