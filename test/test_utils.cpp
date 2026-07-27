@@ -69,8 +69,9 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
   observation.class_id = 1;
   observation.confidence = 1.0;
 
-  for (double t = 0.0; t <= 3.0; ++t) {
-    observation.timestamp = t;
+  for (int t = 0; t <= 3; ++t) {
+    auto time = static_cast<double>(t);
+    observation.timestamp = time;
     tile_map.pushObservation(observation, index_1_1);
   }
 
