@@ -297,8 +297,8 @@ void SegmentationBuffer::bufferSegmentation(
 
     if(visualize_tile_map_)
     {
-      sensor_msgs::msg::PointCloud2 tile_map_cloud = visualizeTemporalTileMap(*temporal_tile_map_, global_frame_, clock_->now());
-      tile_map_pub_->publish(tile_map_cloud);
+      auto tile_map_cloud = visualizeTemporalTileMap(*temporal_tile_map_, global_frame_, clock_->now());
+      tile_map_pub_->publish(*tile_map_cloud);
     }
 
   } catch (tf2::TransformException& ex)
