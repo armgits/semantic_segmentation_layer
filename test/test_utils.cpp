@@ -21,36 +21,36 @@
  */
 TEST(TestVisualizeTileMap, test_empty_map)
 {
-    SegmentationTileMap empty_tile_map;
+  SegmentationTileMap empty_tile_map;
 
-    std_msgs::msg::Header test_header;
-    test_header.frame_id = "camera";
-    test_header.stamp = rclcpp::Time(1, 0);
+  std_msgs::msg::Header test_header;
+  test_header.frame_id = "camera";
+  test_header.stamp = rclcpp::Time(1, 0);
 
-    auto pc = visualizeTemporalTileMap(empty_tile_map, test_header.frame_id, test_header.stamp);
+  auto pc = visualizeTemporalTileMap(empty_tile_map, test_header.frame_id, test_header.stamp);
 
-    EXPECT_TRUE(pc->data.empty());
-    EXPECT_EQ(pc->header, test_header);
+  EXPECT_TRUE(pc->data.empty());
+  EXPECT_EQ(pc->header, test_header);
 
-    EXPECT_EQ(pc->fields.size(), 6);
+  EXPECT_EQ(pc->fields.size(), 6);
 
-    EXPECT_EQ(pc->fields.at(0).name, "x");
-    EXPECT_EQ(pc->fields.at(0).datatype, sensor_msgs::msg::PointField::FLOAT32);
+  EXPECT_EQ(pc->fields.at(0).name, "x");
+  EXPECT_EQ(pc->fields.at(0).datatype, sensor_msgs::msg::PointField::FLOAT32);
 
-    EXPECT_EQ(pc->fields.at(1).name, "y");
-    EXPECT_EQ(pc->fields.at(1).datatype, sensor_msgs::msg::PointField::FLOAT32);
+  EXPECT_EQ(pc->fields.at(1).name, "y");
+  EXPECT_EQ(pc->fields.at(1).datatype, sensor_msgs::msg::PointField::FLOAT32);
 
-    EXPECT_EQ(pc->fields.at(2).name, "z");
-    EXPECT_EQ(pc->fields.at(2).datatype, sensor_msgs::msg::PointField::FLOAT32);
+  EXPECT_EQ(pc->fields.at(2).name, "z");
+  EXPECT_EQ(pc->fields.at(2).datatype, sensor_msgs::msg::PointField::FLOAT32);
 
-    EXPECT_EQ(pc->fields.at(3).name, "confidence");
-    EXPECT_EQ(pc->fields.at(3).datatype, sensor_msgs::msg::PointField::FLOAT32);
+  EXPECT_EQ(pc->fields.at(3).name, "confidence");
+  EXPECT_EQ(pc->fields.at(3).datatype, sensor_msgs::msg::PointField::FLOAT32);
 
-    EXPECT_EQ(pc->fields.at(4).name, "confidence_avg");
-    EXPECT_EQ(pc->fields.at(4).datatype, sensor_msgs::msg::PointField::FLOAT32);
+  EXPECT_EQ(pc->fields.at(4).name, "confidence_avg");
+  EXPECT_EQ(pc->fields.at(4).datatype, sensor_msgs::msg::PointField::FLOAT32);
 
-    EXPECT_EQ(pc->fields.at(5).name, "class");
-    EXPECT_EQ(pc->fields.at(5).datatype, sensor_msgs::msg::PointField::UINT8);
+  EXPECT_EQ(pc->fields.at(5).name, "class");
+  EXPECT_EQ(pc->fields.at(5).datatype, sensor_msgs::msg::PointField::UINT8);
 }
 
 /**
@@ -58,27 +58,27 @@ TEST(TestVisualizeTileMap, test_empty_map)
  *
  */
 TEST(TestVisualizeTileMap, test_same_multiple_tiles)
- {
-    SegmentationTileMap tile_map;
+{
+  SegmentationTileMap tile_map;
 
-    TileIndex index_1_1;
-    index_1_1.x = 1;
-    index_1_1.y = 1;
+  TileIndex index_1_1;
+  index_1_1.x = 1;
+  index_1_1.y = 1;
 
-    TileObservation observation;
-    observation.class_id = 1;
-    observation.confidence = 1.0;
+  TileObservation observation;
+  observation.class_id = 1;
+  observation.confidence = 1.0;
 
-    for (double t = 0.0; t <= 3.0; ++t) {
+  for (double t = 0.0; t <= 3.0; ++t) {
     observation.timestamp = t;
     tile_map.pushObservation(observation, index_1_1);
-    }
+  }
 
-    std_msgs::msg::Header map_header;
-    map_header.frame_id = "camera";
-    map_header.stamp = rclcpp::Time(3, 0);
+  std_msgs::msg::Header map_header;
+  map_header.frame_id = "camera";
+  map_header.stamp = rclcpp::Time(3, 0);
 
-    auto pc = visualizeTemporalTileMap(tile_map, map_header.frame_id, map_header.stamp);
+  auto pc = visualizeTemporalTileMap(tile_map, map_header.frame_id, map_header.stamp);
 
   /**
    * Check if tile information got correctly encoded into points
@@ -91,14 +91,14 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
    */
   std::vector<PointData> points;
 
-    sensor_msgs::PointCloud2Iterator<float> i_x(*pc, "x");
-    sensor_msgs::PointCloud2Iterator<float> i_y(*pc, "y");
-    sensor_msgs::PointCloud2Iterator<float> i_z(*pc, "z");
-    sensor_msgs::PointCloud2Iterator<float> i_conf(*pc, "confidence");
-    sensor_msgs::PointCloud2Iterator<float> i_conf_avg(*pc, "confidence_avg");
-    sensor_msgs::PointCloud2Iterator<uint8_t> i_class(*pc, "class");
+  sensor_msgs::PointCloud2Iterator<float> i_x(*pc, "x");
+  sensor_msgs::PointCloud2Iterator<float> i_y(*pc, "y");
+  sensor_msgs::PointCloud2Iterator<float> i_z(*pc, "z");
+  sensor_msgs::PointCloud2Iterator<float> i_conf(*pc, "confidence");
+  sensor_msgs::PointCloud2Iterator<float> i_conf_avg(*pc, "confidence_avg");
+  sensor_msgs::PointCloud2Iterator<uint8_t> i_class(*pc, "class");
 
-    for (; i_x != i_x.end(); ++i_x, ++i_y, ++i_z, ++i_conf, ++i_conf_avg, ++i_class) {
+  for (; i_x != i_x.end(); ++i_x, ++i_y, ++i_z, ++i_conf, ++i_conf_avg, ++i_class) {
     PointData point;
     point.class_id = *i_class;
     point.confidence = *i_conf;
@@ -108,16 +108,16 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
     point.z = *i_z;
 
     points.push_back(point);
-    }
+  }
 
-    // Rearrange points by z height
-    std::sort(points.begin(), points.end(),
+  // Rearrange points by z height
+  std::sort(points.begin(), points.end(),
     [](const PointData & lhs, const PointData & rhs){return lhs.z < rhs.z;});
 
-    PointData last_point;
-    last_point.class_id = 0;
+  PointData last_point;
+  last_point.class_id = 0;
 
-    for (const auto & point : points) {
+  for (const auto & point : points) {
     EXPECT_EQ(point.class_id, observation.class_id);
     EXPECT_NEAR(point.confidence, observation.confidence, 1e-3);
 
@@ -131,7 +131,7 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
     EXPECT_NEAR(point.z - last_point.z, 0.02, 1e-2);
 
     last_point = point;
-    }
+  }
 
-    EXPECT_NEAR(last_point.confidence_avg, (observation.confidence * 3.0) / 3.0, 1e-4);
+  EXPECT_NEAR(last_point.confidence_avg, (observation.confidence * 3.0) / 3.0, 1e-4);
 }
