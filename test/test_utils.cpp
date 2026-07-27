@@ -118,20 +118,22 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
   last_point.class_id = 0;
 
   for (const auto & point : points) {
-    EXPECT_EQ(point.class_id, observation.class_id);
-    EXPECT_NEAR(point.confidence, observation.confidence, 1e-3);
+    EXPECT_EQ(point.class_id, 1);
+    EXPECT_NEAR(point.confidence, 1.0, 1e-3);
 
     TileIndex index = tile_map.worldToIndex(point.x, point.y);
-    EXPECT_EQ(index, index_1_1);
+    EXPECT_EQ(index, TileIndex(1, 1));
 
     if (last_point.class_id == 0) {
       last_point = point;
       continue;
     }
+    // Exact z-value in code
     EXPECT_NEAR(point.z - last_point.z, 0.02, 1e-2);
 
     last_point = point;
   }
 
-  EXPECT_NEAR(last_point.confidence_avg, (observation.confidence * 3.0) / 3.0, 1e-4);
+  // Average of 3 observations with 1.0 confidence.
+  EXPECT_NEAR(last_point.confidence_avg, 1.0, 1e-4);
 }
