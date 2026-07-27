@@ -80,8 +80,16 @@ TEST(TestVisualizeTileMap, test_same_multiple_tiles)
 
     auto pc = visualizeTemporalTileMap(tile_map, map_header.frame_id, map_header.stamp);
 
-    // Extract poitns from the output point cloud
-    std::vector<PointData> points;
+  /**
+   * Check if tile information got correctly encoded into points
+   *
+   * Also check if the tiles on the same index stacked correctly as points on top of each
+   * other separated by z-height
+   *
+   * Points from the point cloud are extracted to a vector so that they can be sorted
+   * in ascending order to compare with expected z-height difference between points
+   */
+  std::vector<PointData> points;
 
     sensor_msgs::PointCloud2Iterator<float> i_x(*pc, "x");
     sensor_msgs::PointCloud2Iterator<float> i_y(*pc, "y");
