@@ -102,7 +102,12 @@ public:
   using ConstIterator = typename std::unordered_map<TileIndex,
       TemporalObservationQueue>::const_iterator;
 
-  SegmentationTileMap(float resolution, float decay_time);
+  SegmentationTileMap(float resolution, float decay_time)
+  : resolution_(resolution), decay_time_(decay_time)
+  {
+    tile_map_.reserve(1e4);
+  }
+
   SegmentationTileMap() {}
 
   // Return iterator to the beginning of the tile_map_
@@ -142,14 +147,28 @@ public:
    * @param y Y coordinate in world space.
    * @return The corresponding TileIndex.
    */
-  TileIndex worldToIndex(double x, double y) const;
+  TileIndex worldToIndex(double x, double y) const
+  {
+    // Convert world coordinates to grid indices
+    int ix = static_cast<int>(std::floor(x / resolution_));
+    int iy = static_cast<int>(std::floor(y / resolution_));
+
+    return TileIndex{ix, iy};
+  }
 
   /**
    * @brief Converts a TileIndex to world coordinates.
    * @param idx The index to convert.
    * @return The world coordinates of the tile's center.
    */
-  TileWorldXY indexToWorld(int x, int y) const;
+  TileWorldXY indexToWorld(int x, int y) const
+  {
+    // Calculate the world coordinates of the center of the grid cell
+    double x_world = (static_cast<double>(x) + 0.5) * resolution_;
+    double y_world = (static_cast<double>(y) + 0.5) * resolution_;
+
+    return TileWorldXY{x_world, y_world};
+  }
 
   /**
    * @brief Adds an observation to the specified tile.
@@ -157,13 +176,39 @@ public:
    * @param idx The index of the tile.
    * @param dominant_priority Whether this class should take immediate dominance when observed.
    */
-  void pushObservation(TileObservation & obs, TileIndex & idx, bool dominant_priority = false);
+  void pushObservation(TileObservation & obs, TileIndex & idx, bool dominant_priority = false)
+  {
+    auto it = tile_map_.find(idx);
+    if (it != tile_map_.end()) {
+      // TileIndex exists, push the observation with dominance flag
+      it->second.push(obs, dominant_priority);
+    } else {
+      // TileIndex does not exist, create a new TemporalObservationQueue with decay time
+      TemporalObservationQueue & queue = tile_map_[idx];
+      queue.setDecayTime(decay_time_);
+      queue.push(obs, dominant_priority);
+    }
+  }
 
   /**
    * @brief Removes observations older than the decay time from all tiles.
    * @param current_time The current time for comparison.
    */
-  void purgeOldObservations(double current_time);
+  void purgeOldObservations(double current_time)
+  {
+    std::vector<TileIndex> tiles_to_remove;
+    for (auto & tile : tile_map_) {
+      tile.second.purgeOld(current_time);
+      if(tile.second.empty()) {
+        tiles_to_remove.emplace_back(tile.first);
+      }
+    }
+    if(tile_map_.size() > 0) {
+      for (auto & tile : tiles_to_remove) {
+        tile_map_.erase(tile);
+      }
+    }
+  }
 };
 
 #endif  // SEMANTIC_SEGMENTATION_LAYER__SEGMENTATION_TILE_MAP_HPP_
