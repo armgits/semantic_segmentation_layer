@@ -153,34 +153,32 @@ void SegmentationBuffer::bufferSegmentation(
         frustum_origin.z = global_origin.point.z;
         ground_fov_checker_.updatePose(frustum_origin, cam_tf.transform.rotation);
 
-        if (visualize_frustum_fov_ && frustum_fov_pub_)
-        {
-            std::vector<geometry_msgs::msg::Point> polygon = ground_fov_checker_.getGroundPolygonForVisualization();
-            visualization_msgs::msg::Marker marker;
-            marker.header.frame_id = global_frame_;
-            marker.header.stamp = cloud.header.stamp;
-            marker.ns = buffer_source_ + "_frustum";
-            marker.id = 0;
-            marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-            marker.action = visualization_msgs::msg::Marker::ADD;
-            marker.scale.x = 0.05;
-            marker.color.r = 0.0f;
-            marker.color.g = 1.0f;
-            marker.color.b = 0.0f;
-            marker.color.a = 1.0f;
-            if (polygon.size() >= 3)
-            {
-                for (const auto& p : polygon)
-                    marker.points.push_back(p);
-                marker.points.push_back(polygon.front());  // close the polygon
-            }
-            else if (polygon.size() == 2)
-            {
-                marker.points.push_back(polygon[0]);
-                marker.points.push_back(polygon[1]);
-            }
-            frustum_fov_pub_->publish(marker);
+      if (visualize_frustum_fov_ && frustum_fov_pub_) {
+        std::vector<geometry_msgs::msg::Point> polygon =
+          ground_fov_checker_.getGroundPolygonForVisualization();
+        auto marker = std::make_unique<visualization_msgs::msg::Marker>();
+        marker->header.frame_id = global_frame_;
+        marker->header.stamp = cloud.header.stamp;
+        marker->ns = buffer_source_ + "_frustum";
+        marker->id = 0;
+        marker->type = visualization_msgs::msg::Marker::LINE_STRIP;
+        marker->action = visualization_msgs::msg::Marker::ADD;
+        marker->scale.x = 0.05;
+        marker->color.r = 0.0f;
+        marker->color.g = 1.0f;
+        marker->color.b = 0.0f;
+        marker->color.a = 1.0f;
+        if (polygon.size() >= 3) {
+          for (const auto & p : polygon) {
+            marker->points.push_back(p);
+          }
+          marker->points.push_back(polygon.front());        // close the polygon
+        } else if (polygon.size() == 2) {
+          marker->points.push_back(polygon[0]);
+          marker->points.push_back(polygon[1]);
         }
+        frustum_fov_pub_->publish(std::move(marker));
+      }
     }
 
     sensor_msgs::msg::PointCloud2 global_frame_cloud;
