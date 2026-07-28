@@ -323,6 +323,8 @@ void SemanticSegmentationLayer::onInitialize()
       &SemanticSegmentationLayer::dynamicParametersCallback,
       this,
       std::placeholders::_1));
+
+  node_clock_ = node->get_clock();
 }
 
 // The method is called to ask the plugin: which area of costmap it needs to update.
@@ -346,13 +348,8 @@ void SemanticSegmentationLayer::updateBounds(double robot_x, double robot_y, dou
   getSegmentationTileMaps(segmentation_tile_maps);
 
   // Get current time for decay calculations
-  auto node = node_.lock();
-  if (!node) {
-    RCLCPP_ERROR(logger_, "Failed to lock node in updateBounds");
-    return;
-  }
-  double current_time = node->now().seconds();
-  
+  double current_time = node_clock_->now().seconds();
+
   // Check if the current time is valid
   if (current_time <= 0.0) {
     RCLCPP_WARN(logger_, "Invalid current time in updateBounds: %.3f", current_time);
