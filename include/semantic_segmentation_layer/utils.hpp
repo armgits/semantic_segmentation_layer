@@ -76,11 +76,11 @@ inline sensor_msgs::msg::PointCloud2::UniquePtr visualizeTemporalTileMap(
   // Define fields for PointCloud2
   sensor_msgs::PointCloud2Modifier modifier(*cloud);
   modifier.setPointCloud2Fields(6, "x", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "y", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "z", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "confidence", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "confidence_avg", 1, sensor_msgs::msg::PointField::FLOAT32,
-                                     "class", 1, sensor_msgs::msg::PointField::UINT8);
+                                   "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+                                   "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+                                   "confidence", 1, sensor_msgs::msg::PointField::FLOAT32,
+                                   "confidence_avg", 1, sensor_msgs::msg::PointField::FLOAT32,
+                                   "class", 1, sensor_msgs::msg::PointField::UINT8);
 
   // Reserve space for points
   std::vector<PointData> points;
