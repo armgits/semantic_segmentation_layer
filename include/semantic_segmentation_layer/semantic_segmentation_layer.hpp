@@ -189,8 +189,8 @@ class SemanticSegmentationLayer : public nav2_costmap_2d::CostmapLayer
 
     std::vector<std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>> segmentation_buffers_;
 
-  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
-  rclcpp::Clock::SharedPtr node_clock_;
+    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
+    rclcpp::Clock::SharedPtr node_clock_;
 
     std::string global_frame_;
     std::string topics_string_;
