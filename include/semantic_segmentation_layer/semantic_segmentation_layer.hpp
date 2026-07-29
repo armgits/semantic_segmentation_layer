@@ -59,106 +59,118 @@
 #include "tf2_ros/message_filter.hpp"
 #include "vision_msgs/msg/label_info.hpp"
 
-namespace semantic_segmentation_layer {
+namespace semantic_segmentation_layer
+{
 /**
  * @class SemanticSegmentationLayer
  * @brief Takes in semantic segmentation messages and aligned pointclouds to populate the 2D costmap
  */
 class SemanticSegmentationLayer : public nav2_costmap_2d::CostmapLayer
 {
-   public:
-    /**
-     * @brief A constructor
-     */
-    SemanticSegmentationLayer();
+public:
+  /**
+   * @brief A constructor
+   */
+  SemanticSegmentationLayer();
 
-    /**
-     * @brief A destructor
-     */
-    virtual ~SemanticSegmentationLayer() {}
+  /**
+   * @brief A destructor
+   */
+  virtual ~SemanticSegmentationLayer() {}
 
-    /**
-     * @brief Initialization process of layer on startup
-     */
-    virtual void onInitialize();
-    /**
-     * @brief Update the bounds of the master costmap by this layer's update dimensions. 
-     * This method includes temporal consistency by purging old observations
-     * before calculating costs, ensuring the costmap reflects the current state
-     * after decay time has been applied.
-     * @param robot_x X pose of robot
-     * @param robot_y Y pose of robot
-     * @param robot_yaw Robot orientation
-     * @param min_x X min map coord of the window to update
-     * @param min_y Y min map coord of the window to update
-     * @param max_x X max map coord of the window to update
-     * @param max_y Y max map coord of the window to update
-     */
-    virtual void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
-                              double* max_x, double* max_y);
-    /**
-     * @brief Update the costs in the master costmap in the window
-     * @param master_grid The master costmap grid to update
-     * @param min_x X min map coord of the window to update
-     * @param min_y Y min map coord of the window to update
-     * @param max_x X max map coord of the window to update
-     * @param max_y Y max map coord of the window to update
-     */
-    virtual void updateCosts(nav2_costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j);
+  /**
+   * @brief Initialization process of layer on startup
+   */
+  virtual void onInitialize();
 
-    /**
-     * @brief Reset this costmap
-     */
-    virtual void reset();
+  /**
+   * @brief Update the bounds of the master costmap by this layer's update dimensions.
+   * This method includes temporal consistency by purging old observations
+   * before calculating costs, ensuring the costmap reflects the current state
+   * after decay time has been applied.
+   * @param robot_x X pose of robot
+   * @param robot_y Y pose of robot
+   * @param robot_yaw Robot orientation
+   * @param min_x X min map coord of the window to update
+   * @param min_y Y min map coord of the window to update
+   * @param max_x X max map coord of the window to update
+   * @param max_y Y max map coord of the window to update
+   */
+  virtual void updateBounds(
+    double robot_x, double robot_y, double robot_yaw, double * min_x, double * min_y,
+    double * max_x, double * max_y);
 
-    virtual void onFootprintChanged();
+  /**
+   * @brief Update the costs in the master costmap in the window
+   * @param master_grid The master costmap grid to update
+   * @param min_x X min map coord of the window to update
+   * @param min_y Y min map coord of the window to update
+   * @param max_x X max map coord of the window to update
+   * @param max_y Y max map coord of the window to update
+   */
+  virtual void updateCosts(
+    nav2_costmap_2d::Costmap2D & master_grid, int min_i, int min_j,
+    int max_i, int max_j);
 
-    /**
-     * @brief If clearing operations should be processed on this layer or not
-     */
-    virtual bool isClearable() { return true; }
+  /**
+   * @brief Reset this costmap
+   */
+  virtual void reset();
 
-    /**
-     * @brief Activate this layer - subscribe to topics
-     */
-    virtual void activate();
+  virtual void onFootprintChanged();
 
-    /**
-     * @brief Deactivate this layer - unsubscribe from topics
-     */
-    virtual void deactivate();
+  /**
+   * @brief If clearing operations should be processed on this layer or not
+   */
+  virtual bool isClearable() {return true;}
 
-    /**
-     * @brief Get the buffers and the tile maps the plugin stores. one for each source. Takes a vector of tile maps
-     * as reference and fills it inside the function
-     * @param segmentation_tile_maps the vector of tile maps to be filled by the function
-     * @return whether the tile maps could be retrieved and filled successfully
-     */
-    bool getSegmentationTileMaps(std::vector<std::pair<SegmentationTileMap::SharedPtr, SegmentationBuffer::SharedPtr>>& segmentation_tile_maps);
+  /**
+   * @brief Activate this layer - subscribe to topics
+   */
+  virtual void activate();
 
-    rcl_interfaces::msg::SetParametersResult dynamicParametersCallback(std::vector<rclcpp::Parameter> parameters);
+  /**
+   * @brief Deactivate this layer - unsubscribe from topics
+   */
+  virtual void deactivate();
 
-   private:
-    void syncSegmPointcloudCb(const std::shared_ptr<const sensor_msgs::msg::Image>& segmentation,
-                              const std::shared_ptr<const sensor_msgs::msg::PointCloud2>& pointcloud,
-                              const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>& buffer);
+  /**
+   * @brief Get the buffers and the tile maps the plugin stores. one for each source. Takes a vector of tile maps
+   * as reference and fills it inside the function
+   * @param segmentation_tile_maps the vector of tile maps to be filled by the function
+   * @return whether the tile maps could be retrieved and filled successfully
+   */
+  bool getSegmentationTileMaps(
+    std::vector<std::pair<SegmentationTileMap::SharedPtr,
+    SegmentationBuffer::SharedPtr>> & segmentation_tile_maps);
 
-    void syncSegmConfPointcloudCb(const std::shared_ptr<const sensor_msgs::msg::Image>& segmentation,
-                                  const std::shared_ptr<const sensor_msgs::msg::Image>& confidence,
-                                  const std::shared_ptr<const sensor_msgs::msg::PointCloud2>& pointcloud,
-                                  const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>& buffer);
+  rcl_interfaces::msg::SetParametersResult dynamicParametersCallback(
+    std::vector<rclcpp::Parameter> parameters);
 
-    void labelinfoCb(const std::shared_ptr<const vision_msgs::msg::LabelInfo>& label_info,
-                     const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>& buffer);
+private:
+  void syncSegmPointcloudCb(
+    const std::shared_ptr<const sensor_msgs::msg::Image> & segmentation,
+    const std::shared_ptr<const sensor_msgs::msg::PointCloud2> & pointcloud,
+    const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer> & buffer);
 
-    // Kilted+ (rclcpp >= 29.6) infers NodeType so the second template arg is dropped;
-    // earlier distros default to rclcpp::Node and need LifecycleNode spelled out.
+  void syncSegmConfPointcloudCb(
+    const std::shared_ptr<const sensor_msgs::msg::Image> & segmentation,
+    const std::shared_ptr<const sensor_msgs::msg::Image> & confidence,
+    const std::shared_ptr<const sensor_msgs::msg::PointCloud2> & pointcloud,
+    const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer> & buffer);
+
+  void labelinfoCb(
+    const std::shared_ptr<const vision_msgs::msg::LabelInfo> & label_info,
+    const std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer> & buffer);
+
+// Kilted+ (rclcpp >= 29.6) infers NodeType so the second template arg is dropped;
+// earlier distros default to rclcpp::Node and need LifecycleNode spelled out.
 #if RCLCPP_VERSION_GTE(29, 6, 0)
-    template <typename M>
-    using SubFilter = message_filters::Subscriber<M>;
+  template<typename M>
+  using SubFilter = message_filters::Subscriber<M>;
 #else
-    template <typename M>
-    using SubFilter = message_filters::Subscriber<M, rclcpp_lifecycle::LifecycleNode>;
+  template<typename M>
+  using SubFilter = message_filters::Subscriber<M, rclcpp_lifecycle::LifecycleNode>;
 #endif
 
   std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::Image>>> semantic_segmentation_subs_;
@@ -176,31 +188,35 @@ class SemanticSegmentationLayer : public nav2_costmap_2d::CostmapLayer
       sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
   using ImgPCApproxSync = message_filters::Synchronizer<ImgPCSyncPolicy>;
   using ImgImgPCApproxSync = message_filters::Synchronizer<ImgImgPCSyncPolicy>;
-  using ImgPCSyncVariant = std::variant<std::shared_ptr<ImgPCSync>, std::shared_ptr<ImgPCApproxSync>>;
-  using ImgImgPCSyncVariant = std::variant<std::shared_ptr<ImgImgPCSync>, std::shared_ptr<ImgImgPCApproxSync>>;
+  using ImgPCSyncVariant = std::variant<std::shared_ptr<ImgPCSync>,
+      std::shared_ptr<ImgPCApproxSync>>;
+  using ImgImgPCSyncVariant = std::variant<std::shared_ptr<ImgImgPCSync>,
+      std::shared_ptr<ImgImgPCApproxSync>>;
 
   std::vector<ImgPCSyncVariant> segm_pc_notifiers_;
   std::vector<ImgImgPCSyncVariant> segm_conf_pc_notifiers_;
   std::vector<std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::PointCloud2>>>
   pointcloud_tf_subs_;
 
-    // debug publishers
-    std::map<std::string, std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>>> proc_pointcloud_pubs_map_;
+  // debug publishers
+  std::map<std::string,
+    std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>>> proc_pointcloud_pubs_map_;
 
-    std::vector<std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>> segmentation_buffers_;
+  std::vector<std::shared_ptr<semantic_segmentation_layer::SegmentationBuffer>>
+    segmentation_buffers_;
 
-    rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr dyn_params_handler_;
 
-    std::string global_frame_;
-    std::string topics_string_;
+  std::string global_frame_;
+  std::string topics_string_;
 
-    std::map<std::string, uint8_t> class_map_;
+  std::map<std::string, uint8_t> class_map_;
 
-    bool rolling_window_;
-    bool was_reset_;
-    bool use_approximate_time_sync_;
-    int sensor_data_depth_;
-    int combination_method_;
+  bool rolling_window_;
+  bool was_reset_;
+  bool use_approximate_time_sync_;
+  int sensor_data_depth_;
+  int combination_method_;
 };
 
 }  // namespace semantic_segmentation_layer
