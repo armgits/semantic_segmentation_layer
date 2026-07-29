@@ -33,6 +33,7 @@ include_directories(include)
 add_library(semantic_segmentation_layer SHARED
   src/semantic_segmentation_layer.cpp
   src/segmentation_buffer.cpp
+  src/temporal_observation_queue.cpp
 )
 
 target_include_directories(semantic_segmentation_layer
