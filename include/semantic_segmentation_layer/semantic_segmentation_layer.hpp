@@ -161,23 +161,28 @@ class SemanticSegmentationLayer : public nav2_costmap_2d::CostmapLayer
     using SubFilter = message_filters::Subscriber<M, rclcpp_lifecycle::LifecycleNode>;
 #endif
 
-    std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::Image>>> semantic_segmentation_subs_;
-    std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::Image>>>
-        semantic_segmentation_confidence_subs_;
-    std::vector<std::shared_ptr<SubFilter<vision_msgs::msg::LabelInfo>>> label_info_subs_;
-    std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::PointCloud2>>> pointcloud_subs_;
-    using ExactSync2 = message_filters::TimeSynchronizer<sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
-    using ExactSync3 = message_filters::TimeSynchronizer<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
-    using ApproxSyncPolicy2 = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
-    using ApproxSyncPolicy3 = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image, sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
-    using ApproxSync2 = message_filters::Synchronizer<ApproxSyncPolicy2>;
-    using ApproxSync3 = message_filters::Synchronizer<ApproxSyncPolicy3>;
-    using Sync2Variant = std::variant<std::shared_ptr<ExactSync2>, std::shared_ptr<ApproxSync2>>;
-    using Sync3Variant = std::variant<std::shared_ptr<ExactSync3>, std::shared_ptr<ApproxSync3>>;
+  std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::Image>>> semantic_segmentation_subs_;
+  std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::Image>>>
+  semantic_segmentation_confidence_subs_;
+  std::vector<std::shared_ptr<SubFilter<vision_msgs::msg::LabelInfo>>> label_info_subs_;
+  std::vector<std::shared_ptr<SubFilter<sensor_msgs::msg::PointCloud2>>> pointcloud_subs_;
+  using ImgPCSync = message_filters::TimeSynchronizer<sensor_msgs::msg::Image,
+      sensor_msgs::msg::PointCloud2>;
+  using ImgImgPCSync = message_filters::TimeSynchronizer<sensor_msgs::msg::Image,
+      sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
+  using ImgPCSyncPolicy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
+      sensor_msgs::msg::PointCloud2>;
+  using ImgImgPCSyncPolicy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
+      sensor_msgs::msg::Image, sensor_msgs::msg::PointCloud2>;
+  using ImgPCApproxSync = message_filters::Synchronizer<ImgPCSyncPolicy>;
+  using ImgImgPCApproxSync = message_filters::Synchronizer<ImgImgPCSyncPolicy>;
+  using ImgPCSyncVariant = std::variant<std::shared_ptr<ImgPCSync>, std::shared_ptr<ImgPCApproxSync>>;
+  using ImgImgPCSyncVariant = std::variant<std::shared_ptr<ImgImgPCSync>, std::shared_ptr<ImgImgPCApproxSync>>;
 
-    std::vector<Sync2Variant> segm_pc_notifiers_;
-    std::vector<Sync3Variant> segm_conf_pc_notifiers_;
-    std::vector<std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::PointCloud2>>> pointcloud_tf_subs_;
+  std::vector<ImgPCSyncVariant> segm_pc_notifiers_;
+  std::vector<ImgImgPCSyncVariant> segm_conf_pc_notifiers_;
+  std::vector<std::shared_ptr<tf2_ros::MessageFilter<sensor_msgs::msg::PointCloud2>>>
+  pointcloud_tf_subs_;
 
     // debug publishers
     std::map<std::string, std::shared_ptr<rclcpp::Publisher<sensor_msgs::msg::PointCloud2>>> proc_pointcloud_pubs_map_;
