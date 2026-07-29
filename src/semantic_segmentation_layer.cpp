@@ -249,10 +249,9 @@ void SemanticSegmentationLayer::onInitialize()
           sub_node, confidence_topic, SUB_QOS(custom_qos_profile), sub_opt);
       semantic_segmentation_confidence_sub->unsubscribe();
       semantic_segmentation_confidence_subs_.push_back(semantic_segmentation_confidence_sub);
-      if (use_approximate_time_sync_)
-      {
-        auto segm_conf_pc_approx_sync = std::make_shared<ApproxSync3>(
-          ApproxSyncPolicy3(sensor_data_depth_),
+      if (use_approximate_time_sync_) {
+        auto segm_conf_pc_approx_sync = std::make_shared<ImgImgPCApproxSync>(
+          ImgImgPCSyncPolicy(sensor_data_depth_),
           *semantic_segmentation_subs_.back(), *semantic_segmentation_confidence_subs_.back(),
           *pointcloud_tf_subs_.back());
         segm_conf_pc_approx_sync->setMaxIntervalDuration(rclcpp::Duration(0, 100000000));
@@ -269,12 +268,12 @@ void SemanticSegmentationLayer::onInitialize()
       {
 #if RCLCPP_VERSION_GTE(29, 6, 0)
         // Kilted+ message_filters::TimeSynchronizer takes queue_size first.
-        auto segm_conf_pc_sync = std::make_shared<ExactSync3>(
+        auto segm_conf_pc_sync = std::make_shared<ImgImgPCSync>(
           sensor_data_depth_,
           *semantic_segmentation_subs_.back(), *semantic_segmentation_confidence_subs_.back(),
           *pointcloud_tf_subs_.back());
 #else
-        auto segm_conf_pc_sync = std::make_shared<ExactSync3>(
+        auto segm_conf_pc_sync = std::make_shared<ImgImgPCSync>(
           *semantic_segmentation_subs_.back(), *semantic_segmentation_confidence_subs_.back(),
           *pointcloud_tf_subs_.back(), sensor_data_depth_);
 #endif
@@ -287,14 +286,13 @@ void SemanticSegmentationLayer::onInitialize()
           logger_, "Confidence is enabled for source %s (using ExactTime sync)",
           source.c_str());
       }
-    }
-    else
-    {
-      RCLCPP_WARN(logger_, "Confidence topic was empty for source %s, not using segmentation confidence in that source", source.c_str());
-      if (use_approximate_time_sync_)
-      {
-        auto segm_pc_approx_sync = std::make_shared<ApproxSync2>(
-          ApproxSyncPolicy2(sensor_data_depth_),
+    } else {
+      RCLCPP_WARN(logger_,
+          "Confidence topic was empty for source %s, not using segmentation confidence in that source",
+          source.c_str());
+      if (use_approximate_time_sync_) {
+        auto segm_pc_approx_sync = std::make_shared<ImgPCApproxSync>(
+          ImgPCSyncPolicy(sensor_data_depth_),
           *semantic_segmentation_subs_.back(), *pointcloud_tf_subs_.back());
         segm_pc_approx_sync->setMaxIntervalDuration(rclcpp::Duration(0, 100000000));
         segm_pc_approx_sync->registerCallback(std::bind(
@@ -305,11 +303,11 @@ void SemanticSegmentationLayer::onInitialize()
       else
       {
 #if RCLCPP_VERSION_GTE(29, 6, 0)
-        auto segm_pc_sync = std::make_shared<ExactSync2>(
+        auto segm_pc_sync = std::make_shared<ImgPCSync>(
           sensor_data_depth_,
           *semantic_segmentation_subs_.back(), *pointcloud_tf_subs_.back());
 #else
-        auto segm_pc_sync = std::make_shared<ExactSync2>(
+        auto segm_pc_sync = std::make_shared<ImgPCSync>(
           *semantic_segmentation_subs_.back(), *pointcloud_tf_subs_.back(), sensor_data_depth_);
 #endif
         segm_pc_sync->registerCallback(std::bind(
@@ -587,7 +585,7 @@ SemanticSegmentationLayer::dynamicParametersCallback(
             for(auto & class_type : buffer->getClassTypes()){
               // Get class names from buffer instead of reading parameter
               auto class_names_for_type = buffer->getClassNamesForType(class_type);
-              
+
               if (name == name_ + "." + source +  "." + class_type + "." + "base_cost") {
                 for(auto & class_name : class_names_for_type){
                   CostHeuristicParams cost_params = buffer->getCostForClassName(class_name);
