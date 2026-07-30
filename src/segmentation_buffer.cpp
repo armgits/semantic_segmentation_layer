@@ -146,7 +146,7 @@ void SegmentationBuffer::bufferSegmentation(
     // FOV path: update ground polygon and optional frustum marker when outside decay is enabled
     if (fov_outside_decay_time_ > 0.0) {
       geometry_msgs::msg::TransformStamped cam_tf =
-          tf2_buffer_.lookupTransform(global_frame_, origin_frame, cloud.header.stamp, tf_tolerance_);
+        tf2_buffer_.lookupTransform(global_frame_, origin_frame, cloud.header.stamp, tf_tolerance_);
       geometry_msgs::msg::Point frustum_origin;
       frustum_origin.x = global_origin.point.x;
       frustum_origin.y = global_origin.point.y;
